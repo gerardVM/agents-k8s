@@ -109,8 +109,6 @@ spec:
                   optional: true
             - name: TELEGRAM_BOT_TOKEN
               value: KEEP
-            # GitHub credentials are handled by the github-api-service, not here.
-            # The agent requests short-lived tokens via http://github-api-service:8080/token
           resources:
             requests:
               memory: 512Mi
