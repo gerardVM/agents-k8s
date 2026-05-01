@@ -106,7 +106,7 @@
           "requireMention": true
         }
       },
-      "apiRoot": "http://telegram-api-service:8080/bot"
+      "apiRoot": "http://telegram-api-service:8080"
     }
   }
 }
