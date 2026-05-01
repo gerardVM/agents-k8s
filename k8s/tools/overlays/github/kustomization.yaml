@@ -4,12 +4,12 @@ resources:
   - ../../base
 
 patches:
-  - path: patches/add-token-env.yaml
+  - path: patches/add-credentials-env.yaml
 
-namePrefix: telegram-
+namePrefix: github-
 labels:
   - pairs:
-      app: telegram-api-service
+      app: github-api-service
     includeSelectors: true
 
 generatorOptions: {}

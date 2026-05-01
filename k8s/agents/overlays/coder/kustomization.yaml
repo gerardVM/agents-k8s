@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - ../../base
   - ../../../tools/overlays/telegram
+  - ../../../tools/overlays/github
 
 generatorOptions: {}
 
