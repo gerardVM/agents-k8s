@@ -12,6 +12,7 @@ if (!APP_ID || !INSTALLATION_ID || !PRIVATE_KEY) {
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
+// Generate a JWT signed by the GitHub App private key
 function generateJWT() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
@@ -27,15 +28,16 @@ function generateJWT() {
   return `${signingInput}.${sig.toString("base64url").replace(/=+$/, "")}`;
 }
 
+// Exchange JWT for a short-lived installation access token
 let cachedToken = null;
 let cachedExpiry = 0;
 async function getToken() {
   const now = Date.now();
-  if (cachedToken && now < cachedExpiry - 30000) return cachedToken;
+  if (cachedToken && now < cachedExpiry - 30000) return cachedToken; // 30s buffer
 
   const jwt = generateJWT();
   const resp = await fetch(
-    `https:
+    `https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens`,
     {
       method: "POST",
       headers: {
@@ -52,6 +54,7 @@ async function getToken() {
   return cachedToken;
 }
 
+// Proxy a request to the GitHub API
 async function proxyGitHub(method, path, body) {
   const token = await getToken();
   const opts = {
@@ -62,12 +65,13 @@ async function proxyGitHub(method, path, body) {
       "User-Agent": "github-api-service",
     },
   };
+  // Only send body for methods that support it
   if (body && !["GET", "HEAD", "DELETE"].includes(method)) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
 
-  const resp = await fetch(`https:
+  const resp = await fetch(`https://api.github.com${path}`, opts);
   const data = await resp.json();
   return { status: resp.status, data, headers: resp.headers };
 }
@@ -93,10 +97,16 @@ function readBody(req) {
 
 http.createServer(async (req, res) => {
   try {
+    // Health checks
     if (req.url === "/healthz" || req.url === "/readyz") {
       return json(res, 200, { ok: true });
     }
 
+    // POST /<method>/<path> — proxy to GitHub API
+    // Examples:
+    //   POST /GET/repos/gerardVM/agents
+    //   POST /POST/repos/gerardVM/agents/pulls
+    //   POST /GET/repos/gerardVM/agents/pulls/10
     if (req.method === "POST") {
       const parts = req.url.slice(1).split("/");
       const method = parts.shift().toUpperCase();
