@@ -3,7 +3,10 @@ import crypto from "node:crypto";
 
 const APP_ID = process.env.GITHUB_APP_ID;
 const INSTALLATION_ID = process.env.GITHUB_APP_INSTALLATION_ID;
-const PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY;
+const PRIVATE_KEY = (process.env.GITHUB_APP_PRIVATE_KEY || "")
+  .replace(/\\\\n/g, "\\n")
+  .replace(/\\n/g, "\n")
+  .replace(/^"|"$/g, "");
 
 if (!APP_ID || !INSTALLATION_ID || !PRIVATE_KEY) {
   console.error("GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, and GITHUB_APP_PRIVATE_KEY are required");
@@ -12,7 +15,6 @@ if (!APP_ID || !INSTALLATION_ID || !PRIVATE_KEY) {
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
-// Generate a JWT signed by the GitHub App private key
 function generateJWT() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
@@ -28,20 +30,19 @@ function generateJWT() {
   return `${signingInput}.${sig.toString("base64url").replace(/=+$/, "")}`;
 }
 
-// Exchange JWT for a short-lived installation access token
 let cachedToken = null;
 let cachedExpiry = 0;
 async function getToken() {
   const now = Date.now();
-  if (cachedToken && now < cachedExpiry - 30000) return cachedToken; // 30s buffer
+  if (cachedToken && now < cachedExpiry - 30000) return cachedToken;
 
   const jwt = generateJWT();
   const resp = await fetch(
-    `https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens`,
+    \`https://api.github.com/app/installations/\${INSTALLATION_ID}/access_tokens\`,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${jwt}`,
+        Authorization: \`Bearer \${jwt}\`,
         Accept: "application/vnd.github+json",
       },
     }
@@ -54,24 +55,22 @@ async function getToken() {
   return cachedToken;
 }
 
-// Proxy a request to the GitHub API
 async function proxyGitHub(method, path, body) {
   const token = await getToken();
   const opts = {
     method,
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: \`Bearer \${token}\`,
       Accept: "application/vnd.github+json",
       "User-Agent": "github-api-service",
     },
   };
-  // Only send body for methods that support it
   if (body && !["GET", "HEAD", "DELETE"].includes(method)) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
 
-  const resp = await fetch(`https://api.github.com${path}`, opts);
+  const resp = await fetch(\`https://api.github.com\${path}\`, opts);
   const data = await resp.json();
   return { status: resp.status, data, headers: resp.headers };
 }
@@ -97,21 +96,15 @@ function readBody(req) {
 
 http.createServer(async (req, res) => {
   try {
-    // Health checks
     if (req.url === "/healthz" || req.url === "/readyz") {
       return json(res, 200, { ok: true });
     }
 
-    // POST /<method>/<path> — proxy to GitHub API
-    // Examples:
-    //   POST /GET/repos/gerardVM/agents
-    //   POST /POST/repos/gerardVM/agents/pulls
-    //   POST /GET/repos/gerardVM/agents/pulls/10
     if (req.method === "POST") {
       const parts = req.url.slice(1).split("/");
       const method = parts.shift().toUpperCase();
       if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) {
-        return json(res, 400, { ok: false, error: `unsupported method: ${method}` });
+        return json(res, 400, { ok: false, error: \`unsupported method: \${method}\` });
       }
       const path = "/" + parts.join("/");
       const body = await readBody(req);
@@ -124,4 +117,4 @@ http.createServer(async (req, res) => {
     console.error("request error:", err);
     json(res, 502, { ok: false, error: err.message });
   }
-}).listen(PORT, () => console.log(`github-api-service :${PORT}`));
+}).listen(PORT, () => console.log(\`github-api-service :\${PORT}\`));
