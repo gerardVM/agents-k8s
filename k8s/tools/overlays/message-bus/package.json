@@ -1,0 +1,6 @@
+{
+  "name": "agent-message-bus",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {}
+}
