@@ -43,20 +43,4 @@ k8s/
 2. Create a `kustomization.yaml` pointing to `../../base`
 3. Wire any env vars or patches needed
 
-## Deploying
 
-```bash
-# Deploy coder agent with telegram
-kustomize build k8s/agents/overlays/coder | kubectl apply -f -
-
-# Deploy reviewer agent with telegram
-kustomize build k8s/agents/overlays/reviewer | kubectl apply -f -
-```
-
-## Workflow
-
-- All changes go through PRs
-- Coder agent creates and updates code
-- Reviewer agent analyzes and explains PRs
-- Merge commits only (no squash unless requested)
-- Only merge approved PRs
