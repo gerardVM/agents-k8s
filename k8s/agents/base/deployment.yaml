@@ -44,7 +44,7 @@ spec:
               # cpu: 50m
             limits:
               memory: 64Mi
-              cpu: 100m
+              # cpu: 100m
           volumeMounts:
             - name: openclaw-data
               mountPath: /home/node/.openclaw
@@ -115,7 +115,7 @@ spec:
               # cpu: 250m
             limits:
               memory: 2Gi
-              cpu: "2"
+              # cpu: "2"
           livenessProbe:
             exec:
               command:
