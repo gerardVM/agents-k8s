@@ -109,24 +109,8 @@ spec:
                   optional: true
             - name: TELEGRAM_BOT_TOKEN
               value: KEEP
-            - name: GITHUB_APP_ID
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: githubAppID
-                  optional: true
-            - name: GITHUB_APP_INSTALLATION_ID
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: githubAppInstallationID
-                  optional: true
-            - name: GITHUB_APP_PRIVATE_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: githubAppPrivateKey
-                  optional: true
+            # GitHub credentials are handled by the github-api-service, not here.
+            # The agent requests short-lived tokens via http://github-api-service:8080/token
           resources:
             requests:
               memory: 512Mi
