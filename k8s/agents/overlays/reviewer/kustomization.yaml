@@ -4,6 +4,7 @@ namespace: reviewer-agent
 resources:
   - namespace.yaml
   - ../../base
+  - ../../../tools/overlays/telegram
 
 generatorOptions:
   disableNameSuffixHash: true
