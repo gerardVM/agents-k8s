@@ -4,11 +4,9 @@ resources:
   - pvc.yaml
   - deployment.yaml
 
-generatorOptions:
-  disableNameSuffixHash: true
+generatorOptions: {}
 
 configMapGenerator:
   - name: openclaw-config
     files:
       - openclaw.json
-  - name: openclaw-works

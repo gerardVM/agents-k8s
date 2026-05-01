@@ -29,9 +29,12 @@ spec:
             - sh
             - -c
             - |
+              set -e
               mkdir -p /home/node/.openclaw/workspace
-              cp /workspace/*.md /home/node/.openclaw/workspace/
               cp /config/openclaw.json /home/node/.openclaw/openclaw.json
+              rm -f /home/node/.openclaw/openclaw.json.last-good \
+                    /home/node/.openclaw/openclaw.json.clobbered.* \
+                    /home/node/.openclaw/openclaw.json.bak*
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -45,9 +48,6 @@ spec:
           volumeMounts:
             - name: openclaw-data
               mountPath: /home/node/.openclaw
-            - name: workspace
-              mountPath: /workspace
-              readOnly: true
             - name: config
               mountPath: /config
               readOnly: true
@@ -155,6 +155,34 @@ spec:
           volumeMounts:
             - name: openclaw-data
               mountPath: /home/node/.openclaw
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/AGENTS.md
+              subPath: AGENTS.md
+              readOnly: true
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/LEARNINGS.md
+              subPath: LEARNINGS.md
+              readOnly: true
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/HEARTBEAT.md
+              subPath: HEARTBEAT.md
+              readOnly: true
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/IDENTITY.md
+              subPath: IDENTITY.md
+              readOnly: true
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/SOUL.md
+              subPath: SOUL.md
+              readOnly: true
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/TOOLS.md
+              subPath: TOOLS.md
+              readOnly: true
+            - name: workspace
+              mountPath: /home/node/.openclaw/workspace/USER.md
+              subPath: USER.md
+              readOnly: true
             - name: tmp-volume
               mountPath: /tmp
             - name: npm-cache

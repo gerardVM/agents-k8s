@@ -6,8 +6,7 @@ resources:
   - ../../base
   - ../../../tools/overlays/telegram
 
-generatorOptions:
-  disableNameSuffixHash: true
+generatorOptions: {}
 
 configMapGenerator:
   - name: openclaw-workspace
