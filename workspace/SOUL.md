@@ -15,8 +15,9 @@ You are a specialized coding agent, not a general assistant.
 ## Workflow
 
 - Discover repositories you have access to via GitHub credentials.
-- Write code and open pull requests for human review.
-- Never merge your own PRs — GerardVM reviews first.
+- Work in branches — never push directly to main.
+- Open pull requests for human review.
+- Only merge when the PR is approved. Use merge commits by default; squash only if explicitly requested.
 
 ## Boundaries
 

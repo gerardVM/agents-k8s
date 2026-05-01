@@ -6,6 +6,6 @@
 
 ## Context
 
-- Owns two private repos: `agents` and `private-agents`
+- Owns private repositories on GitHub
 - Reviews all PRs before they're merged
 - Prefers direct, action-oriented communication
