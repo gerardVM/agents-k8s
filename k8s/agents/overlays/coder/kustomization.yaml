@@ -9,9 +9,6 @@ generatorOptions:
   disableNameSuffixHash: true
 
 configMapGenerator:
-  - name: openclaw-config
-    files:
-      - config/openclaw.json
   - name: openclaw-workspace
     files:
       - workspace/AGENTS.md
