@@ -22,7 +22,8 @@ k8s/
     │   └── service.yaml
     └── overlays/
         ├── telegram/        # Telegram Bot API proxy
-        └── github/          # GitHub API proxy (app auth, no tokens in agent env)
+        ├── github/          # GitHub API proxy (app auth, no tokens in agent env)
+        └── message-bus/     # Inter-agent message bus
 ```
 
 ## Adding an agent
@@ -59,3 +60,16 @@ Holds GitHub App credentials (app ID, installation ID, private key) and proxies 
   - `path`: the GitHub API path (e.g., `/repos/gerardVM/agents/pulls`)
   - Body (for POST/PUT/PATCH): JSON to forward as the request body
   - The service generates a JWT, exchanges it for a short-lived installation token, and makes the request — all internally. The agent never sees or stores a token.
+
+### agent-message-bus
+
+A lightweight HTTP message bus for agent-to-agent communication within the cluster. Agents poll their inbox and process messages without needing an external chat platform.
+
+- **`POST /send`** — send a message to an agent
+  ```json
+  {"to": "target-agent", "from": "sender-agent", "subject": "optional", "body": "any"}
+  ```
+- **`GET /inbox/<agentId>`** — poll for pending messages
+- **`GET /inbox/<agentId>?ack=<msgId>`** — acknowledge/dequeue a processed message
+
+Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions on concurrent writes.
