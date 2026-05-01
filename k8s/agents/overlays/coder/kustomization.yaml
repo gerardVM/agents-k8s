@@ -4,6 +4,7 @@ namespace: coder-agent
 resources:
   - namespace.yaml
   - ../../base
+  - ../../../tools/overlays/telegram
 
 generatorOptions:
   disableNameSuffixHash: true
