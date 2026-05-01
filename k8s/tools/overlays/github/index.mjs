@@ -65,7 +65,8 @@ async function proxyGitHub(method, path, body) {
       "User-Agent": "github-api-service",
     },
   };
-  if (body) {
+  // Only send body for methods that support it
+  if (body && !["GET", "HEAD", "DELETE"].includes(method)) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
