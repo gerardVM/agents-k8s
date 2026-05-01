@@ -21,7 +21,8 @@ k8s/
     │   ├── kustomization.yaml
     │   └── service.yaml
     └── overlays/
-        └── telegram/        # Telegram Bot API proxy
+        ├── telegram/        # Telegram Bot API proxy
+        └── github/          # GitHub API proxy (app auth, no tokens in agent env)
 ```
 
 ## Adding an agent
@@ -43,4 +44,18 @@ k8s/
 2. Create a `kustomization.yaml` pointing to `../../base`
 3. Wire any env vars or patches needed
 
+## Tools
 
+### telegram-api-service
+
+A thin proxy that injects the Telegram bot token from a Kubernetes secret and forwards requests to `api.telegram.org`. The agent calls this service instead of holding the token directly.
+
+### github-api-service
+
+Holds GitHub App credentials (app ID, installation ID, private key) and proxies all GitHub API calls internally.
+
+- **`POST /{METHOD}/{path}`** — proxy any GitHub API call
+  - `METHOD`: GET, POST, PUT, PATCH, DELETE
+  - `path`: the GitHub API path (e.g., `/repos/gerardVM/agents/pulls`)
+  - Body (for POST/PUT/PATCH): JSON to forward as the request body
+  - The service generates a JWT, exchanges it for a short-lived installation token, and makes the request — all internally. The agent never sees or stores a token.
