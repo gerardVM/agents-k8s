@@ -7,6 +7,33 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
+function lockFile(agentId) {
+  return path.join(DATA_DIR, `${agentId}.lock`);
+}
+
+function acquireLock(agentId, retries = 10, delay = 50) {
+  const lf = lockFile(agentId);
+  for (let i = 0; i < retries; i++) {
+    try {
+      const fd = fs.openSync(lf, "wx");
+      fs.closeSync(fd);
+      return true;
+    } catch {
+      if (i < retries - 1) {
+        const start = Date.now();
+        while (Date.now() - start < delay) {}
+      }
+    }
+  }
+  return false;
+}
+
+function releaseLock(agentId) {
+  try {
+    fs.unlinkSync(lockFile(agentId));
+  } catch {}
+}
+
 function readInbox(agentId) {
   const file = path.join(DATA_DIR, `${agentId}.json`);
   try {
@@ -19,6 +46,12 @@ function readInbox(agentId) {
 function writeInbox(agentId, messages) {
   const file = path.join(DATA_DIR, `${agentId}.json`);
   fs.writeFileSync(file, JSON.stringify(messages));
+}
+
+function pruneExpired(messages, ttlMs) {
+  if (!ttlMs) return messages;
+  const cutoff = Date.now() - ttlMs;
+  return messages.filter((m) => new Date(m.timestamp).getTime() > cutoff);
 }
 
 function json(res, status, data) {
@@ -51,46 +84,62 @@ http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
-    // POST /send — send a message to an agent
-    // Body: { to: "agentId", from: "agentId", subject: "string", body: "any" }
+    // POST /send
     if (req.method === "POST" && parts[0] === "send") {
       const msg = await readBody(req);
       if (!msg.to || !msg.from) {
         return json(res, 400, { ok: false, error: "to and from are required" });
       }
-      msgCounter++;
-      const entry = {
-        id: `${Date.now()}-${msgCounter}`,
-        to: msg.to,
-        from: msg.from,
-        subject: msg.subject || "",
-        body: msg.body || "",
-        timestamp: new Date().toISOString(),
-      };
-      const inbox = readInbox(msg.to);
-      inbox.push(entry);
-      writeInbox(msg.to, inbox);
-      return json(res, 200, { ok: true, id: entry.id });
+      if (!acquireLock(msg.to)) {
+        return json(res, 503, { ok: false, error: "inbox busy" });
+      }
+      try {
+        msgCounter++;
+        const entry = {
+          id: `${Date.now()}-${msgCounter}`,
+          to: msg.to,
+          from: msg.from,
+          subject: msg.subject || "",
+          body: msg.body || "",
+          ttlMinutes: msg.ttlMinutes || 60,
+          timestamp: new Date().toISOString(),
+        };
+        const inbox = readInbox(msg.to);
+        inbox.push(entry);
+        writeInbox(msg.to, inbox);
+        return json(res, 200, { ok: true, id: entry.id });
+      } finally {
+        releaseLock(msg.to);
+      }
     }
 
-    // GET /inbox/<agentId> — poll for messages
+    // GET /inbox/<agentId>
     if (req.method === "GET" && parts[0] === "inbox" && parts[1]) {
       const agentId = parts[1];
-      const inbox = readInbox(agentId);
-
-      // ?ack=id — acknowledge/dequeue a specific message
-      const ackId = url.searchParams.get("ack");
-      if (ackId) {
-        const remaining = inbox.filter((m) => m.id !== ackId);
-        writeInbox(agentId, remaining);
-        return json(res, 200, {
-          ok: true,
-          acknowledged: ackId,
-          remaining: remaining.length,
-        });
+      if (!acquireLock(agentId)) {
+        return json(res, 503, { ok: false, error: "inbox busy" });
       }
+      try {
+        let inbox = readInbox(agentId);
+        const before = inbox.length;
+        inbox = pruneExpired(inbox, 60 * 60 * 1000);
+        if (inbox.length < before) writeInbox(agentId, inbox);
 
-      return json(res, 200, { ok: true, messages: inbox });
+        const ackId = url.searchParams.get("ack");
+        if (ackId) {
+          const remaining = inbox.filter((m) => m.id !== ackId);
+          writeInbox(agentId, remaining);
+          return json(res, 200, {
+            ok: true,
+            acknowledged: ackId,
+            remaining: remaining.length,
+          });
+        }
+
+        return json(res, 200, { ok: true, messages: inbox });
+      } finally {
+        releaseLock(agentId);
+      }
     }
 
     json(res, 404, { ok: false, error: "not_found" });
