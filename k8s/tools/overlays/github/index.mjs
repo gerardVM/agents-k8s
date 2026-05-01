@@ -16,7 +16,7 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 function generateJWT() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
-  const payload = { iss: parseInt(APP_ID, 10), iat: now, exp: now + 600 };
+  const payload = { iss: parseInt(APP_ID, 10), iat: now, exp: now + 60 };
 
   const b64url = (obj) =>
     Buffer.from(JSON.stringify(obj))
@@ -28,105 +28,99 @@ function generateJWT() {
   return `${signingInput}.${sig.toString("base64url").replace(/=+$/, "")}`;
 }
 
-// Exchange JWT for an installation access token
-async function getInstallationToken() {
+// Exchange JWT for a short-lived installation access token
+let cachedToken = null;
+let cachedExpiry = 0;
+async function getToken() {
+  const now = Date.now();
+  if (cachedToken && now < cachedExpiry - 30000) return cachedToken; // 30s buffer
+
   const jwt = generateJWT();
-  const url = `https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens`;
-
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${jwt}`,
-      Accept: "application/vnd.github+json",
-    },
-  });
-
+  const resp = await fetch(
+    `https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
   const data = await resp.json();
-  if (!resp.ok) {
-    throw new Error(data.message || "failed to get token");
-  }
-  return data;
+  if (!resp.ok) throw new Error(data.message || "failed to get token");
+
+  cachedToken = data.token;
+  cachedExpiry = new Date(data.expires_at).getTime();
+  return cachedToken;
 }
 
-// Respond with JSON
+// Proxy a request to the GitHub API
+async function proxyGitHub(method, path, body) {
+  const token = await getToken();
+  const opts = {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "github-api-service",
+    },
+  };
+  if (body) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+
+  const resp = await fetch(`https://api.github.com${path}`, opts);
+  const data = await resp.json();
+  return { status: resp.status, data, headers: resp.headers };
+}
+
 function json(res, status, data) {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
 }
 
-http.createServer(async (req, res) => {
-  // Health checks
-  if (req.url === "/healthz" || req.url === "/readyz") {
-    return json(res, 200, { ok: true });
-  }
-
-  // GET /token — return a short-lived installation access token
-  if (req.method === "GET" && req.url === "/token") {
-    try {
-      const token = await getInstallationToken();
-      return json(res, 200, {
-        token: token.token,
-        expires_at: token.expires_at,
-        permissions: token.permissions,
-      });
-    } catch (err) {
-      console.error("getInstallationToken:", err);
-      return json(res, 502, { ok: false, error: "upstream_unreachable" });
-    }
-  }
-
-  // GET /repos — list installation repos
-  if (req.method === "GET" && req.url === "/repos") {
-    try {
-      const token = await getInstallationToken();
-      const resp = await fetch("https://api.github.com/installation/repositories?per_page=100", {
-        headers: {
-          Authorization: `Bearer ${token.token}`,
-          Accept: "application/vnd.github+json",
-        },
-      });
-      const data = await resp.json();
-      return json(res, resp.status, data);
-    } catch (err) {
-      console.error("list repos:", err);
-      return json(res, 502, { ok: false, error: "upstream_unreachable" });
-    }
-  }
-
-  // POST /proxy — generic proxy to GitHub API
-  // Body: { method, url, body? }
-  // e.g. { "method": "POST", "url": "/repos/gerardVM/agents/pulls", "body": { ... } }
-  if (req.method === "POST" && req.url === "/proxy") {
-    let body = "";
-    req.on("data", (c) => (body += c));
-    req.on("end", async () => {
+function readBody(req) {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (c) => (data += c));
+    req.on("end", () => {
       try {
-        const { method, url, body: reqBody } = JSON.parse(body || "{}");
-        if (!method || !url) {
-          return json(res, 400, { ok: false, error: "method and url required" });
-        }
-
-        const token = await getInstallationToken();
-        const fetchOpts = {
-          method: method.toUpperCase(),
-          headers: {
-            Authorization: `Bearer ${token.token}`,
-            Accept: "application/vnd.github+json",
-            "Content-Type": "application/json",
-          },
-        };
-        if (reqBody) fetchOpts.body = JSON.stringify(reqBody);
-
-        const upstream = await fetch(`https://api.github.com${url}`, fetchOpts);
-        const data = await upstream.json();
-        return json(res, upstream.status, data);
-      } catch (err) {
-        console.error("proxy:", err);
-        return json(res, 502, { ok: false, error: "proxy_error" });
+        resolve(data ? JSON.parse(data) : {});
+      } catch {
+        resolve({});
       }
     });
-    return;
-  }
+  });
+}
 
-  json(res, 404, { ok: false, error: "not_found" });
+http.createServer(async (req, res) => {
+  try {
+    // Health checks
+    if (req.url === "/healthz" || req.url === "/readyz") {
+      return json(res, 200, { ok: true });
+    }
+
+    // POST /<method>/<path> — proxy to GitHub API
+    // Examples:
+    //   POST /GET/repos/gerardVM/agents
+    //   POST /POST/repos/gerardVM/agents/pulls
+    //   POST /GET/repos/gerardVM/agents/pulls/10
+    if (req.method === "POST") {
+      const parts = req.url.slice(1).split("/");
+      const method = parts.shift().toUpperCase();
+      if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+        return json(res, 400, { ok: false, error: `unsupported method: ${method}` });
+      }
+      const path = "/" + parts.join("/");
+      const body = await readBody(req);
+      const result = await proxyGitHub(method, path, body);
+      return json(res, result.status, result.data);
+    }
+
+    json(res, 404, { ok: false, error: "not_found" });
+  } catch (err) {
+    console.error("request error:", err);
+    json(res, 502, { ok: false, error: err.message });
+  }
 }).listen(PORT, () => console.log(`github-api-service :${PORT}`));
