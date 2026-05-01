@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels: {}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: install-deps
+          image: node:22-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              cp /src/index.mjs /app/
+              cp /src/package.json /app/
+              cd /app
+              npm install --omit=dev 2>&1
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 200m
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - name: app-code
+              mountPath: /src/index.mjs
+              subPath: index.mjs
+              readOnly: true
+            - name: app-code
+              mountPath: /src/package.json
+              subPath: package.json
+              readOnly: true
+            - name: app-data
+              mountPath: /app
+      containers:
+        - name: api
+          image: node:22-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - /app/index.mjs
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: 48Mi
+              cpu: 30m
+            limits:
+              memory: 128Mi
+              cpu: 200m
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: app-data
+              mountPath: /app
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: app-code
+          configMap:
+            name: tool-code
+        - name: app-data
+          emptyDir: {}
+        - name: tmp-volume
+          emptyDir: {}
