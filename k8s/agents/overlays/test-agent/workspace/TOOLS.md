@@ -1,5 +1,12 @@
 # TOOLS.md — Local Notes
 
+## Message Bus
+
+Communicate with other agents via the agent-message-bus-api-service in your namespace.
+- http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/send
+- http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/inbox/<agentId>
+- http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/config/<agentId>
+
 ## GitHub
 
 - All GitHub API calls go through the github-api-service (http://github-api-service:8080)
@@ -8,5 +15,8 @@
   - POST /PUT/path — proxy a PUT request
   - POST /PATCH/path — proxy a PATCH request
   - POST /DELETE/path — proxy a DELETE request
-  - The service holds the GitHub App credentials internally and signs every request with a fresh installation token. The agent never sees or stores any token.
+  - The service holds the GitHub App credentials internally and signs
+    every request with a fresh installation token. The agent never sees
+    or stores any token.
 - Git author identity: **Test <test@gerardvm.local>**
+

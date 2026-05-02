@@ -1,17 +1,15 @@
 # BOOTSTRAP.md — Startup Instructions
 
-On every startup, do the following:
+On every startup, poll the message-bus for instructions.
 
-1. Check your config on the message-bus:
-   GET http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/config/<your-agent-id>
-   
-   If config contains a telegram_token, use it for Telegram API calls.
+1. Check for config:
+   GET http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/config/<agentId>
 
-2. Check your inbox for pending messages:
-   GET http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/inbox/<your-agent-id>
+2. Check for pending messages:
+   GET http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/inbox/<agentId>
    
    Retry up to 5 times with 3-second delays between attempts.
-   Acknowledge messages with ?ack=<msgId> after processing.
+   Acknowledge processed messages with ?ack=<msgId>.
 
-3. Process any instructions found in config or inbox messages.
+3. Follow any instructions found in config or messages.
 
