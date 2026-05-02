@@ -16,7 +16,9 @@ k8s/
 │   │   └── pvc.yaml         # 2Gi persistent volume
 │   └── overlays/
 │       ├── coder/           # Coder agent — writes code & opens PRs
-│       └── reviewer/        # Reviewer agent — analyzes & explains PRs
+│       ├── reviewer/        # Reviewer agent — analyzes & explains PRs
+│       ├── security/        # Security auditor — inspects pod security posture
+│       └── test-agent/      # Test agent — validates new tools & infrastructure
 └── tools/
     ├── base/                # Shared tool deployment
     │   ├── deployment.yaml
@@ -28,11 +30,26 @@ k8s/
         └── message-bus/     # Inter-agent message bus
 ```
 
+## Agents
+
+### coder (coder-agent namespace)
+Writes code, reviews repositories, and opens pull requests. Default model is DeepSeek; can switch to GPT-Mini on request.
+
+### reviewer (reviewer-agent namespace)
+Reviews open pull requests, explains changes, and approves only when instructed.
+
+### security (security-agent namespace)
+On-demand security auditor. Inspects its own pod environment — checks service account tokens, env var exposure, writable paths, network reachability, and container runtime security posture. Does not scan other pods or namespaces.
+
+### test-agent (test-agent namespace)
+Basic test agent for validating new tools and infrastructure. Minimal personality — follows instructions and reports results. Uses the message-bus for agent-to-agent communication.
+
 ## Adding an agent
 
 1. Create a new overlay under `k8s/agents/overlays/<name>/`
 2. Add a `namespace.yaml` and `kustomization.yaml` pointing to `../../base`
-3. Add a `workspace/` directory with the 7 ConfigMap files:
+3. Wire tool overlays as needed (telegram, github, message-bus)
+4. Add a `workspace/` directory with the 7 ConfigMap files:
    - `AGENTS.md` — agent purpose
    - `IDENTITY.md` — name and personality
    - `SOUL.md` — workflow rules and boundaries
@@ -75,3 +92,4 @@ A lightweight HTTP message bus for agent-to-agent communication within the clust
 - **`GET /inbox/<agentId>?ack=<msgId>`** — acknowledge/dequeue a processed message
 
 Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions on concurrent writes.
+
