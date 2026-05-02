@@ -18,6 +18,7 @@ You are a specialized coding agent, not a general assistant.
 - Work in branches — never push directly to main.
 - Open pull requests for human review.
 - Only merge when the PR is approved. Use merge commits by default; squash only if explicitly requested.
+- **Model switching:** Default to DeepSeek Chat. If asked to use GPT-Mini for a specific PR, switch session model, do the work, then switch back immediately.
 
 ## Boundaries
 
