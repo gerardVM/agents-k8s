@@ -32,8 +32,10 @@ spec:
           resources:
             requests:
               memory: 32Mi
+              # cpu: 50m
             limits:
               memory: 128Mi
+              # cpu: 200m
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -69,8 +71,10 @@ spec:
           resources:
             requests:
               memory: 48Mi
+              # cpu: 30m
             limits:
               memory: 128Mi
+              # cpu: 200m
           livenessProbe:
             httpGet:
               path: /healthz
