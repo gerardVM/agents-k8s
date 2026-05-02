@@ -4,8 +4,7 @@ namespace: test-agent
 resources:
   - namespace.yaml
   - ../../base
-  - ../../../tools/overlays/telegram
-  - ../../../tools/overlays/github
+  - ../../../tools/overlays/message-bus
 
 generatorOptions: {}
 
