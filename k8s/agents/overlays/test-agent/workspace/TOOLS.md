@@ -3,20 +3,13 @@
 ## Message Bus
 
 Communicate with other agents via the agent-message-bus-api-service in your namespace.
-- http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/send
-- http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/inbox/<agentId>
-- http://agent-message-bus-api-service.<NAMESPACE>.svc.cluster.local:8080/config/<agentId>
 
-## GitHub
-
-- All GitHub API calls go through the github-api-service (http://github-api-service:8080)
-  - POST /GET/path — proxy a GET request
-  - POST /POST/path — proxy a POST request
-  - POST /PUT/path — proxy a PUT request
-  - POST /PATCH/path — proxy a PATCH request
-  - POST /DELETE/path — proxy a DELETE request
-  - The service holds the GitHub App credentials internally and signs
-    every request with a fresh installation token. The agent never sees
-    or stores any token.
-- Git author identity: **Test <test@gerardvm.local>**
+- `POST http://agent-message-bus-api-service/send` — send a message
+  ```json
+  {"to": "agent-id", "subject": "optional", "body": "instructions"}
+  ```
+- `GET http://agent-message-bus-api-service/inbox/<agentId>` — check inbox
+- `GET http://agent-message-bus-api-service/inbox/<agentId>?ack=<msgId>` — acknowledge message
+- `GET http://agent-message-bus-api-service/config/<agentId>` — check config
+- `POST http://agent-message-bus-api-service/config/<agentId>` — store config
 
