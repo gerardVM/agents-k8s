@@ -2,8 +2,6 @@
 
 Kubernetes-native agent deployments powered by [OpenClaw](https://github.com/openclaw/openclaw).
 
-<!-- SECURITY TEST 3 -->
-
 ## Structure
 
 ```
@@ -17,17 +15,17 @@ k8s/
 │   └── overlays/
 │       ├── coder/           # Coder agent — writes code & opens PRs
 │       ├── reviewer/        # Reviewer agent — analyzes & explains PRs
-│       ├── security/        # Security auditor — inspects pod security posture
-│       └── test-agent/      # Test agent — validates new tools & infrastructure
+│       └── security/        # Security auditor — inspects pod security posture
 └── tools/
     ├── base/                # Shared tool deployment
     │   ├── deployment.yaml
     │   ├── kustomization.yaml
+    │   ├── pvc.yaml         # 50Mi persistent volume (used by message-bus)
     │   └── service.yaml
     └── overlays/
         ├── telegram/        # Telegram Bot API proxy
         ├── github/          # GitHub API proxy (app auth, no tokens in agent env)
-        └── message-bus/     # Inter-agent message bus
+        └── message-bus/     # Per-agent message bus & config store
 ```
 
 ## Agents
@@ -40,9 +38,6 @@ Reviews open pull requests, explains changes, and approves only when instructed.
 
 ### security (security-agent namespace)
 On-demand security auditor. Inspects its own pod environment — checks service account tokens, env var exposure, writable paths, network reachability, and container runtime security posture. Does not scan other pods or namespaces.
-
-### test-agent (test-agent namespace)
-Basic test agent for validating new tools and infrastructure. Minimal personality — follows instructions and reports results. Uses the message-bus for agent-to-agent communication.
 
 ## Adding an agent
 
@@ -82,14 +77,21 @@ Holds GitHub App credentials (app ID, installation ID, private key) and proxies 
 
 ### agent-message-bus
 
-A lightweight HTTP message bus for agent-to-agent communication within the cluster. Agents poll their inbox and process messages without needing an external chat platform.
+A lightweight HTTP service deployed alongside each agent in its own namespace. Handles agent-to-agent messaging and persistent config storage.
 
-- **`POST /send`** — send a message to an agent
+Deployed via the `message-bus` tool overlay. One instance per agent namespace — no agentId routing needed.
+
+**Messaging:**
+- **`POST /send`** — receive a message into this agent's inbox
   ```json
-  {"to": "target-agent", "from": "sender-agent", "subject": "optional", "body": "any"}
+  {"from": "sender-id", "subject": "optional", "body": "any"}
   ```
-- **`GET /inbox/<agentId>`** — poll for pending messages
-- **`GET /inbox/<agentId>?ack=<msgId>`** — acknowledge/dequeue a processed message
+- **`GET /inbox`** — poll for pending messages
+- **`GET /inbox?ack=<msgId>`** — acknowledge a processed message
 
-Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions on concurrent writes.
+**Config storage:**
+- **`GET /config`** — retrieve stored config for this agent
+- **`POST /config`** — store or merge config for this agent
+
+Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions. Persistent storage is backed by a 50Mi PVC.
 
