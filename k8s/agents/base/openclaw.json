@@ -96,6 +96,8 @@
         ]
       },
       "openai": {
+        "baseUrl": "https://api.openai.com",
+        "api": "openai-completions",
         "models": [
           {
             "id": "gpt-mini",
