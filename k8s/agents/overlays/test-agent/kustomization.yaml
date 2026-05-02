@@ -12,6 +12,7 @@ configMapGenerator:
   - name: openclaw-workspace
     files:
       - workspace/AGENTS.md
+      - workspace/BOOTSTRAP.md
       - workspace/LEARNINGS.md
       - workspace/HEARTBEAT.md
       - workspace/IDENTITY.md
