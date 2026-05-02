@@ -20,6 +20,9 @@
       "models": {
         "deepseek/deepseek-chat": {
           "alias": "DeepSeek"
+        },
+        "openai/gpt-mini": {
+          "alias": "GPT-Mini"
         }
       },
       "model": {
@@ -85,6 +88,24 @@
               "cacheRead": 0.14,
               "cacheWrite": 0
             },
+            "compat": {
+              "supportsUsageInStreaming": true
+            },
+            "api": "openai-completions"
+          }
+        ]
+      },
+      "openai": {
+        "models": [
+          {
+            "id": "gpt-mini",
+            "name": "GPT-Mini",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32768,
+            "maxTokens": 4096,
             "compat": {
               "supportsUsageInStreaming": true
             },
