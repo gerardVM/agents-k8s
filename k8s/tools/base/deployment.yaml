@@ -66,6 +66,8 @@ spec:
               value: production
             - name: PORT
               value: "8080"
+            - name: DATA_DIR
+              value: /app/data
           resources:
             requests:
               memory: 48Mi
@@ -106,6 +108,7 @@ spec:
           configMap:
             name: tool-code
         - name: app-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: message-bus-data
         - name: tmp-volume
           emptyDir: {}

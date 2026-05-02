@@ -1,18 +1,22 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 
 const DATA_DIR = process.env.DATA_DIR || "/tmp/messages";
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
+// Use the pod hostname as default agent identity (namespace-scoped)
+const AGENT_ID = process.env.AGENT_ID || os.hostname().split("-")[0] || "agent";
+
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-function lockFile(agentId) {
-  return path.join(DATA_DIR, `${agentId}.lock`);
+function lockFile() {
+  return path.join(DATA_DIR, `lock`);
 }
 
-function acquireLock(agentId, retries = 10, delay = 50) {
-  const lf = lockFile(agentId);
+function acquireLock(retries = 10, delay = 50) {
+  const lf = lockFile();
   for (let i = 0; i < retries; i++) {
     try {
       const fd = fs.openSync(lf, "wx");
@@ -28,14 +32,14 @@ function acquireLock(agentId, retries = 10, delay = 50) {
   return false;
 }
 
-function releaseLock(agentId) {
+function releaseLock() {
   try {
-    fs.unlinkSync(lockFile(agentId));
+    fs.unlinkSync(lockFile());
   } catch {}
 }
 
-function readInbox(agentId) {
-  const file = path.join(DATA_DIR, `${agentId}.json`);
+function readStore(name) {
+  const file = path.join(DATA_DIR, `${name}.json`);
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
@@ -43,9 +47,23 @@ function readInbox(agentId) {
   }
 }
 
-function writeInbox(agentId, messages) {
-  const file = path.join(DATA_DIR, `${agentId}.json`);
-  fs.writeFileSync(file, JSON.stringify(messages));
+function writeStore(name, data) {
+  const file = path.join(DATA_DIR, `${name}.json`);
+  fs.writeFileSync(file, JSON.stringify(data));
+}
+
+function readConfig() {
+  const file = path.join(DATA_DIR, `config.json`);
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeConfig(config) {
+  const file = path.join(DATA_DIR, `config.json`);
+  fs.writeFileSync(file, JSON.stringify(config, null, 2));
 }
 
 function pruneExpired(messages, ttlMs) {
@@ -84,51 +102,46 @@ http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
-    // POST /send
+    // POST /send — send a message to this agent's inbox
     if (req.method === "POST" && parts[0] === "send") {
       const msg = await readBody(req);
-      if (!msg.to || !msg.from) {
-        return json(res, 400, { ok: false, error: "to and from are required" });
-      }
-      if (!acquireLock(msg.to)) {
-        return json(res, 503, { ok: false, error: "inbox busy" });
+      if (!acquireLock()) {
+        return json(res, 503, { ok: false, error: "busy" });
       }
       try {
         msgCounter++;
         const entry = {
           id: `${Date.now()}-${msgCounter}`,
-          to: msg.to,
-          from: msg.from,
+          from: msg.from || "unknown",
           subject: msg.subject || "",
           body: msg.body || "",
           ttlMinutes: msg.ttlMinutes || 60,
           timestamp: new Date().toISOString(),
         };
-        const inbox = readInbox(msg.to);
+        const inbox = readStore("inbox");
         inbox.push(entry);
-        writeInbox(msg.to, inbox);
+        writeStore("inbox", inbox);
         return json(res, 200, { ok: true, id: entry.id });
       } finally {
-        releaseLock(msg.to);
+        releaseLock();
       }
     }
 
-    // GET /inbox/<agentId>
-    if (req.method === "GET" && parts[0] === "inbox" && parts[1]) {
-      const agentId = parts[1];
-      if (!acquireLock(agentId)) {
-        return json(res, 503, { ok: false, error: "inbox busy" });
+    // GET /inbox — check this agent's inbox
+    if (req.method === "GET" && parts[0] === "inbox" && !parts[1]) {
+      if (!acquireLock()) {
+        return json(res, 503, { ok: false, error: "busy" });
       }
       try {
-        let inbox = readInbox(agentId);
+        let inbox = readStore("inbox");
         const before = inbox.length;
         inbox = pruneExpired(inbox, 60 * 60 * 1000);
-        if (inbox.length < before) writeInbox(agentId, inbox);
+        if (inbox.length < before) writeStore("inbox", inbox);
 
         const ackId = url.searchParams.get("ack");
         if (ackId) {
           const remaining = inbox.filter((m) => m.id !== ackId);
-          writeInbox(agentId, remaining);
+          writeStore("inbox", remaining);
           return json(res, 200, {
             ok: true,
             acknowledged: ackId,
@@ -138,7 +151,28 @@ http.createServer(async (req, res) => {
 
         return json(res, 200, { ok: true, messages: inbox });
       } finally {
-        releaseLock(agentId);
+        releaseLock();
+      }
+    }
+
+    // GET /config — retrieve this agent's stored config
+    if (req.method === "GET" && parts[0] === "config" && !parts[1]) {
+      return json(res, 200, { ok: true, config: readConfig() });
+    }
+
+    // POST /config — store/merge config for this agent
+    if (req.method === "POST" && parts[0] === "config" && !parts[1]) {
+      if (!acquireLock()) {
+        return json(res, 503, { ok: false, error: "busy" });
+      }
+      try {
+        const update = await readBody(req);
+        const config = readConfig();
+        Object.assign(config, update);
+        writeConfig(config);
+        return json(res, 200, { ok: true, config });
+      } finally {
+        releaseLock();
       }
     }
 
@@ -147,4 +181,4 @@ http.createServer(async (req, res) => {
     console.error("request error:", err);
     json(res, 500, { ok: false, error: err.message });
   }
-}).listen(PORT, () => console.log(`agent-message-bus :${PORT}`));
+}).listen(PORT, () => console.log(`agent-message-bus :${PORT} (agent: ${AGENT_ID})`));

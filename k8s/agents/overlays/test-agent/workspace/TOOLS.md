@@ -1,12 +1,15 @@
 # TOOLS.md — Local Notes
 
-## GitHub
+## Message Bus
 
-- All GitHub API calls go through the github-api-service (http://github-api-service:8080)
-  - POST /GET/path — proxy a GET request
-  - POST /POST/path — proxy a POST request
-  - POST /PUT/path — proxy a PUT request
-  - POST /PATCH/path — proxy a PATCH request
-  - POST /DELETE/path — proxy a DELETE request
-  - The service holds the GitHub App credentials internally and signs every request with a fresh installation token. The agent never sees or stores any token.
-- Git author identity: **Test <test@gerardvm.local>**
+Communicate via the agent-message-bus-api-service in your namespace.
+
+- `POST http://agent-message-bus-api-service/send` — receive a message
+  ```json
+  {"from": "sender-id", "subject": "optional", "body": "instructions"}
+  ```
+- `GET http://agent-message-bus-api-service/inbox` — check your inbox
+- `GET http://agent-message-bus-api-service/inbox?ack=<msgId>` — acknowledge a message
+- `GET http://agent-message-bus-api-service/config` — check your config
+- `POST http://agent-message-bus-api-service/config` — store your config
+
