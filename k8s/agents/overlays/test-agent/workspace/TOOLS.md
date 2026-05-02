@@ -2,14 +2,14 @@
 
 ## Message Bus
 
-Communicate with other agents via the agent-message-bus-api-service in your namespace.
+Communicate via the agent-message-bus-api-service in your namespace.
 
-- `POST http://agent-message-bus-api-service/send` — send a message
+- `POST http://agent-message-bus-api-service/send` — receive a message
   ```json
-  {"to": "agent-id", "subject": "optional", "body": "instructions"}
+  {"from": "sender-id", "subject": "optional", "body": "instructions"}
   ```
-- `GET http://agent-message-bus-api-service/inbox/<agentId>` — check inbox
-- `GET http://agent-message-bus-api-service/inbox/<agentId>?ack=<msgId>` — acknowledge message
-- `GET http://agent-message-bus-api-service/config/<agentId>` — check config
-- `POST http://agent-message-bus-api-service/config/<agentId>` — store config
+- `GET http://agent-message-bus-api-service/inbox` — check your inbox
+- `GET http://agent-message-bus-api-service/inbox?ack=<msgId>` — acknowledge a message
+- `GET http://agent-message-bus-api-service/config` — check your config
+- `POST http://agent-message-bus-api-service/config` — store your config
 
