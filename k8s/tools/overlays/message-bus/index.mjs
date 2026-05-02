@@ -113,6 +113,39 @@ http.createServer(async (req, res) => {
       }
     }
 
+    // GET /config/<agentId> — retrieve agent config
+    if (req.method === "GET" && parts[0] === "config" && parts[1]) {
+      const agentId = parts[1];
+      const file = path.join(DATA_DIR, `${agentId}-config.json`);
+      try {
+        const config = JSON.parse(fs.readFileSync(file, "utf8"));
+        return json(res, 200, { ok: true, config });
+      } catch {
+        return json(res, 200, { ok: true, config: {} });
+      }
+    }
+
+    // POST /config/<agentId> — store/merge agent config
+    if (req.method === "POST" && parts[0] === "config" && parts[1]) {
+      const agentId = parts[1];
+      if (!acquireLock(agentId)) {
+        return json(res, 503, { ok: false, error: "busy" });
+      }
+      try {
+        const update = await readBody(req);
+        const file = path.join(DATA_DIR, `${agentId}-config.json`);
+        let config = {};
+        try {
+          config = JSON.parse(fs.readFileSync(file, "utf8"));
+        } catch {}
+        Object.assign(config, update);
+        fs.writeFileSync(file, JSON.stringify(config, null, 2));
+        return json(res, 200, { ok: true, config });
+      } finally {
+        releaseLock(agentId);
+      }
+    }
+
     // GET /inbox/<agentId>
     if (req.method === "GET" && parts[0] === "inbox" && parts[1]) {
       const agentId = parts[1];
