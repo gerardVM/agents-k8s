@@ -83,12 +83,6 @@ spec:
                   name: openclaw-secrets
                   key: ANTHROPIC_API_KEY
                   optional: true
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: OPENAI_API_KEY
-                  optional: true
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -101,7 +95,6 @@ spec:
                   name: openclaw-secrets
                   key: OPENROUTER_API_KEY
                   optional: true
-            - name: DEEPSEEK_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: openclaw-secrets

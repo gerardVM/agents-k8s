@@ -43,6 +43,9 @@
   "session": {
     "dmScope": "per-channel-peer"
   },
+  "modelRouting": {
+    "strategy": "none"
+  },
   "tools": {
     "profile": "coding"
   },
@@ -50,7 +53,7 @@
     "mode": "merge",
     "providers": {
       "deepseek": {
-        "baseUrl": "https://api.deepseek.com",
+        "baseUrl": "http://deepseek-mcp-service:8080",
         "api": "openai-completions",
         "models": [
           {
@@ -96,7 +99,7 @@
         ]
       },
       "openai": {
-        "baseUrl": "https://api.openai.com",
+        "baseUrl": "http://openai-mcp-service:8080",
         "api": "openai-completions",
         "models": [
           {
