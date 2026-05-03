@@ -20,7 +20,6 @@ k8s/
     ├── base/                # Shared tool deployment
     │   ├── deployment.yaml
     │   ├── kustomization.yaml
-    │   ├── pvc.yaml         # 50Mi persistent volume (used by message-bus)
     │   └── service.yaml
     └── overlays/
         ├── telegram/        # Telegram Bot API proxy
@@ -43,7 +42,7 @@ On-demand security auditor. Inspects its own pod environment — checks service 
 
 1. Create a new overlay under `k8s/agents/overlays/<name>/`
 2. Add a `namespace.yaml` and `kustomization.yaml` pointing to `../../base`
-3. Wire tool overlays as needed (telegram, github, message-bus)
+3. Wire tool overlays as needed (telegram, github, message-bus, openai-proxy, deepseek-proxy)
 4. Add a `workspace/` directory with the 7 ConfigMap files:
    - `AGENTS.md` — agent purpose
    - `IDENTITY.md` — name and personality
@@ -75,6 +74,14 @@ Holds GitHub App credentials (app ID, installation ID, private key) and proxies 
   - Body (for POST/PUT/PATCH): JSON to forward as the request body
   - The service generates a JWT, exchanges it for a short-lived installation token, and makes the request — all internally. The agent never sees or stores a token.
 
+### deepseek-proxy
+
+A reverse proxy that holds the `DEEPSEEK_API_KEY` secret and forwards `/v1/*` requests to `api.deepseek.com`. Agents call this service instead of holding the key directly. Configured as the DeepSeek provider `baseUrl` in `openclaw.json`.
+
+### openai-proxy
+
+A reverse proxy that holds the `OPENAI_API_KEY` secret and forwards `/v1/*` requests to `api.openai.com`. Agents call this service instead of holding the key directly. Configured as the OpenAI provider `baseUrl` in `openclaw.json`.
+
 ### agent-message-bus
 
 A lightweight HTTP service deployed alongside each agent in its own namespace. Handles agent-to-agent messaging and persistent config storage.
@@ -93,5 +100,5 @@ Deployed via the `message-bus` tool overlay. One instance per agent namespace �
 - **`GET /config`** — retrieve stored config for this agent
 - **`POST /config`** — store or merge config for this agent
 
-Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions. Persistent storage is backed by a 50Mi PVC.
+Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions. Storage is ephemeral (emptyDir), so state resets on pod restart.
 
