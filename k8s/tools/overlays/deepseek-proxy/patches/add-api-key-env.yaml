@@ -13,4 +13,4 @@ spec:
                 secretKeyRef:
                   name: openclaw-secrets
                   key: DEEPSEEK_API_KEY
-                  optional: true
+                  optional: false
