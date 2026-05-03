@@ -95,11 +95,6 @@ spec:
                   name: openclaw-secrets
                   key: OPENROUTER_API_KEY
                   optional: true
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: DEEPSEEK_API_KEY
-                  optional: true
             - name: TELEGRAM_BOT_TOKEN
               value: KEEP
           resources:
