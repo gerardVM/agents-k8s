@@ -61,7 +61,15 @@ http.createServer(async (req, res) => {
         const upstream = await fetch(upstreamUrl, opts);
         const data = await upstream.json();
 
+        // Forward upstream headers that matter
         const respHeaders = { "Content-Type": "application/json" };
+        if (upstream.headers.get("x-ratelimit-remaining")) {
+          respHeaders["x-ratelimit-remaining"] = upstream.headers.get("x-ratelimit-remaining");
+        }
+        if (upstream.headers.get("x-ratelimit-reset")) {
+          respHeaders["x-ratelimit-reset"] = upstream.headers.get("x-ratelimit-reset");
+        }
+
         res.writeHead(upstream.status, respHeaders);
         res.end(JSON.stringify(data));
       } catch (err) {
