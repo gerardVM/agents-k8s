@@ -6,8 +6,8 @@ resources:
   - ../../base
   - ../../../tools/overlays/telegram
   - ../../../tools/overlays/github
-  - ../../../tools/overlays/openai-mcp
-  - ../../../tools/overlays/deepseek-mcp
+  - ../../../tools/overlays/openai-proxy
+  - ../../../tools/overlays/deepseek-proxy
 
 generatorOptions: {}
 

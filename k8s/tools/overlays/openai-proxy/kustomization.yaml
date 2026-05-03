@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+
+patches:
+  - path: patches/add-api-key-env.yaml
+
+namePrefix: openai-proxy-
+labels:
+  - pairs:
+      app: openai-proxy-service
+    includeSelectors: true
+
+generatorOptions: {}
+
+configMapGenerator:
+  - name: tool-code
+    files:
+      - index.mjs
+      - package.json
