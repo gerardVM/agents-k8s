@@ -43,9 +43,6 @@
   "session": {
     "dmScope": "per-channel-peer"
   },
-  "modelRouting": {
-    "strategy": "none"
-  },
   "tools": {
     "profile": "coding"
   },
@@ -53,7 +50,7 @@
     "mode": "merge",
     "providers": {
       "deepseek": {
-        "baseUrl": "http://deepseek-proxy-service:8080",
+        "baseUrl": "http://deepseek-proxy-api-service:8080",
         "api": "openai-completions",
         "models": [
           {
@@ -99,7 +96,7 @@
         ]
       },
       "openai": {
-        "baseUrl": "http://openai-proxy-service:8080",
+        "baseUrl": "http://openai-proxy-api-service:8080",
         "api": "openai-completions",
         "models": [
           {
