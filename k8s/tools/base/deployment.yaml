@@ -108,7 +108,6 @@ spec:
           configMap:
             name: tool-code
         - name: app-data
-          persistentVolumeClaim:
-            claimName: message-bus-data
+          emptyDir: {}
         - name: tmp-volume
           emptyDir: {}
