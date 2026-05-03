@@ -5,6 +5,8 @@ resources:
   - namespace.yaml
   - ../../base
   - ../../../tools/overlays/telegram
+  - ../../../tools/overlays/deepseek-proxy
+  - ../../../tools/overlays/openai-proxy
 
 generatorOptions: {}
 
