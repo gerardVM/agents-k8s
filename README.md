@@ -20,7 +20,6 @@ k8s/
     ├── base/                # Shared tool deployment
     │   ├── deployment.yaml
     │   ├── kustomization.yaml
-    │   ├── pvc.yaml         # 50Mi persistent volume (used by message-bus)
     │   └── service.yaml
     └── overlays/
         ├── telegram/        # Telegram Bot API proxy
@@ -93,5 +92,5 @@ Deployed via the `message-bus` tool overlay. One instance per agent namespace �
 - **`GET /config`** — retrieve stored config for this agent
 - **`POST /config`** — store or merge config for this agent
 
-Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions. Persistent storage is backed by a 50Mi PVC.
+Messages default to 60-minute TTL and are automatically pruned. File-level locking prevents race conditions. Storage is ephemeral (emptyDir), so state resets on pod restart.
 
