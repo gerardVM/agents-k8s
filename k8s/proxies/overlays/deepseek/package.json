@@ -1,0 +1,7 @@
+{
+  "name": "deepseek-api-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Proxies OpenAI-compatible API calls to DeepSeek, keeping the API key server-side",
+  "dependencies": {}
+}
