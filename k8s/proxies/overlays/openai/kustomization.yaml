@@ -1,13 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: deepseek-proxy
+namespace: openai-proxy
 resources:
   - namespace.yaml
   - ../../base
 
 labels:
   - pairs:
-      app: deepseek-proxy
+      app: openai-proxy
     includeSelectors: true
 
 generatorOptions: {}
@@ -30,10 +30,10 @@ patches:
           valueFrom:
             secretKeyRef:
               name: openclaw-secrets
-              key: DEEPSEEK_API_KEY
+              key: OPENAI_API_KEY
               optional: false
       - op: add
         path: /spec/template/spec/containers/0/env/-
         value:
           name: UPSTREAM_BASE_URL
-          value: "https://api.deepseek.com"
+          value: "https://api.openai.com"

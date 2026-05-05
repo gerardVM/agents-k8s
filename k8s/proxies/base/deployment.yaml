@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: deepseek-proxy
+  name: proxy
 spec:
   replicas: 1
   selector:
@@ -64,12 +64,7 @@ spec:
               value: production
             - name: PORT
               value: "8080"
-            - name: DEEPSEEK_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: DEEPSEEK_API_KEY
-                  optional: false
+            # API_KEY and UPSTREAM_BASE_URL are patched by each overlay
           resources:
             requests:
               memory: 32Mi
