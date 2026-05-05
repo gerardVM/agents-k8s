@@ -84,11 +84,7 @@ spec:
                   key: ANTHROPIC_API_KEY
                   optional: true
             - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: OPENAI_API_KEY
-                  optional: true
+              value: KEEP
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -102,11 +98,7 @@ spec:
                   key: OPENROUTER_API_KEY
                   optional: true
             - name: DEEPSEEK_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-secrets
-                  key: DEEPSEEK_API_KEY
-                  optional: true
+              value: KEEP
             - name: TELEGRAM_BOT_TOKEN
               value: KEEP
           resources:
