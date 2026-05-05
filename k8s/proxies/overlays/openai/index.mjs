@@ -6,7 +6,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-const UPSTREAM_BASE = process.env.UPSTREAM_BASE_URL || "https://api.deepseek.com";
+const UPSTREAM_BASE = process.env.UPSTREAM_BASE_URL || "https://api.openai.com";
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
 function json(res, status, data) {
