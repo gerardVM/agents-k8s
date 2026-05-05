@@ -58,6 +58,46 @@ On-demand security auditor. Inspects its own pod environment — checks service 
 2. Create a `kustomization.yaml` pointing to `../../base`
 3. Wire any env vars or patches needed
 
+
+## API Proxies (k8s/proxies)
+
+Thin proxies that keep API keys server-side so agents don't need them in their environment. Each proxy runs in its own namespace and forwards OpenAI-compatible requests to the upstream provider.
+
+```
+k8s/proxies/
+├── base/                          # Shared deployment & service
+│   ├── kustomization.yaml
+│   ├── deployment.yaml
+│   └── service.yaml
+└── overlays/
+    ├── deepseek/                  # deepseek-proxy namespace
+    │   ├── kustomization.yaml
+    │   ├── index.mjs
+    │   └── package.json
+    └── openai/                    # openai-proxy namespace
+        ├── kustomization.yaml
+        ├── index.mjs
+        └── package.json
+```
+
+### deepseek-proxy
+
+- **Service URL:** `proxy.deepseek-proxy.svc.cluster.local:8080`
+- **API Key from secret:** `DEEPSEEK_API_KEY` in `openclaw-secrets`
+- **Upstream:** `https://api.deepseek.com`
+
+### openai-proxy
+
+- **Service URL:** `proxy.openai-proxy.svc.cluster.local:8080`
+- **API Key from secret:** `OPENAI_API_KEY` in `openclaw-secrets`
+- **Upstream:** `https://api.openai.com`
+
+### Adding a new proxy
+
+1. Create a new overlay under `k8s/proxies/overlays/<name>/`
+2. Add a `kustomization.yaml` pointing to `../../base`
+3. Add `index.mjs` and `package.json` (matching the generic API_KEY / UPSTREAM_BASE_URL pattern)
+4. Patch the deployment to inject the correct `API_KEY` and `UPSTREAM_BASE_URL` env vars
 ## Tools
 
 ### telegram-api-service

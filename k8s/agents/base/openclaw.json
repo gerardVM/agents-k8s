@@ -50,7 +50,7 @@
     "mode": "merge",
     "providers": {
       "deepseek": {
-        "baseUrl": "https://api.deepseek.com",
+        "baseUrl": "http://proxy.deepseek-proxy.svc.cluster.local:8080",
         "api": "openai-completions",
         "models": [
           {
@@ -96,7 +96,7 @@
         ]
       },
       "openai": {
-        "baseUrl": "https://api.openai.com",
+        "baseUrl": "http://proxy.openai-proxy.svc.cluster.local:8080",
         "api": "openai-completions",
         "models": [
           {
