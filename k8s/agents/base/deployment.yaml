@@ -25,6 +25,13 @@ spec:
         - name: init-config
           image: busybox:1.37
           imagePullPolicy: IfNotPresent
+          env:
+            - name: TELEGRAM_ALLOWED_ID
+              valueFrom:
+                secretKeyRef:
+                  name: openclaw-secrets
+                  key: TELEGRAM_ALLOWED_ID
+                  optional: true
           command:
             - sh
             - -c
@@ -32,6 +39,9 @@ spec:
               set -e
               mkdir -p /home/node/.openclaw/workspace
               cp /config/openclaw.json /home/node/.openclaw/openclaw.json
+              if [ -n "${TELEGRAM_ALLOWED_ID:-}" ]; then
+                sed -i "s#__TELEGRAM_ALLOWED_ID__#${TELEGRAM_ALLOWED_ID}#g" /home/node/.openclaw/openclaw.json
+              fi
               rm -f /home/node/.openclaw/openclaw.json.last-good \
                     /home/node/.openclaw/openclaw.json.clobbered.* \
                     /home/node/.openclaw/openclaw.json.bak*
