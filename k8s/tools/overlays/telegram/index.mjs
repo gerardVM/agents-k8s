@@ -1,4 +1,5 @@
 import http from "node:http";
+import { Readable } from "node:stream";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!TOKEN) {
@@ -54,6 +55,27 @@ http.createServer(async (req, res) => {
       json(res, upstream.status, data);
     } catch (err) {
       console.error(`proxy /bot/${method}:`, err);
+      json(res, 502, { ok: false, error: "upstream_unreachable" });
+    }
+    return;
+  }
+
+  // File download: GET /file/bot<token>/<file_path> -> api.telegram.org/file/bot<TOKEN>/<file_path>
+  if (req.method === "GET" && req.url.startsWith("/file/bot")) {
+    const rest = req.url.slice("/file/bot".length); // "/<token>/<path>"
+    if (!rest || rest.length < 2) return json(res, 400, { ok: false, error: "missing file path" });
+
+    try {
+      const upstream = await fetch(`https://api.telegram.org/file/bot${TOKEN}${rest}`);
+      if (!upstream.ok) {
+        return json(res, upstream.status, { ok: false, error: `upstream ${upstream.status}` });
+      }
+      res.writeHead(upstream.status, {
+        "Content-Type": upstream.headers.get("content-type") || "application/octet-stream",
+      });
+      await Readable.fromWeb(upstream.body).pipe(res);
+    } catch (err) {
+      console.error(`proxy /file/bot:`, err);
       json(res, 502, { ok: false, error: "upstream_unreachable" });
     }
     return;
