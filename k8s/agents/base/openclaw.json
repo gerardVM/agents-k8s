@@ -44,7 +44,15 @@
     "dmScope": "per-channel-peer"
   },
   "tools": {
-    "profile": "coding"
+    "profile": "coding",
+    "media": {
+      "audio": {
+        "enabled": true,
+        "models": [
+          { "provider": "openai", "model": "gpt-4o-mini-transcribe" }
+        ]
+      }
+    }
   },
   "models": {
     "mode": "merge",
