@@ -13,9 +13,12 @@ k8s/
 │   │   ├── openclaw.json
 │   │   └── pvc.yaml
 │   └── overlays/
-│       ├── coder/                  # Coder agent
+│       ├── coder/                  # Coder agent (has kubectl access)
 │       ├── reviewer/               # Reviewer agent
 │       └── security/               # Security auditor
+├── rbac/
+│   ├── agent-reader-clusterrole.yaml
+│   └── kustomization.yaml
 ├── proxies/
 │   ├── base/                       # Shared API proxy deployment & service
 │   │   ├── deployment.yaml
@@ -39,16 +42,39 @@ All components follow the same kustomize pattern: an overlay points to a shared 
 
 ---
 
+## RBAC
+
+Cluster-wide read-only RBAC for agents that need Kubernetes observability:
+
+- **`k8s/rbac/agent-reader-clusterrole.yaml`** — defines a `ClusterRole` + `ClusterRoleBinding`
+  with get/list/watch on pods, nodes, events, deployments, metrics, and more.
+- Bound to the `agent-reader` ServiceAccount in each agent's namespace.
+- Designed for observability only — no create/update/delete verbs.
+
+For an agent to use this, the overlay must:
+1. Create a `ServiceAccount` named `agent-reader` in its namespace
+2. Patch the deployment to set `automountServiceAccountToken: true` and `serviceAccountName: agent-reader`
+
+See the [coder overlay](k8s/agents/overlays/coder/) for a working example.
+
+---
+
 ## Agents
 
 ### coder (`coder-agent` namespace)
 Writes code, reviews repositories, and opens pull requests. Default model is DeepSeek; can switch to GPT-Mini on request.
 
+**Kubernetes access:** Yes — has a read-only service account bound to `agent-reader` ClusterRole. Can run `kubectl` for observability.
+
 ### reviewer (`reviewer-agent` namespace)
 Reviews open pull requests, explains changes, and approves only when instructed.
 
+**Kubernetes access:** No (can be enabled — see RBAC section).
+
 ### security (`security-agent` namespace)
 On-demand security auditor. Inspects its own pod environment — checks service account tokens, env var exposure, writable paths, network reachability, and container runtime security posture. Does not scan other pods or namespaces.
+
+**Kubernetes access:** No (can be enabled — see RBAC section).
 
 ---
 
@@ -131,3 +157,14 @@ All three component types (agents, proxies, tools) follow the same pattern:
 **For proxies**, add `index.mjs` and `package.json` using the generic `API_KEY` / `UPSTREAM_BASE_URL` convention, then patch the deployment to inject the correct env vars.
 
 **For tools**, wire any env vars or patches needed, and reference the tool's overlay in the agent `kustomization.yaml`.
+
+### kubectl install (base deployment)
+
+The base agent deployment downloads the static `kubectl` binary into an emptyDir volume
+via a `kubectl-install` initContainer. The binary is mounted at `/opt/kubectl/kubectl`
+in the gateway container and added to PATH.
+
+This is harmless without a service account token — the binary exists but every command
+returns `$HOME/.kube/config: no such file or directory` until the overlay enables
+in-cluster auth by patching `automountServiceAccountToken: true` and setting
+`serviceAccountName: agent-reader`.

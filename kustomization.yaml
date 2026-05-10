@@ -6,3 +6,4 @@ resources:
  - k8s/agents/overlays/security
  - k8s/proxies/overlays/deepseek
  - k8s/proxies/overlays/openai
+ - k8s/rbac

@@ -1,7 +1,0 @@
-{
-  "name": "openai-api-proxy",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Proxies OpenAI-compatible API calls to OpenAI, keeping the API key server-side",
-  "dependencies": {}
-}

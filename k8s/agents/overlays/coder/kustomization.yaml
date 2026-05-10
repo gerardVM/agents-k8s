@@ -6,6 +6,10 @@ resources:
   - ../../base
   - ../../../tools/overlays/telegram
   - ../../../tools/overlays/github
+  - serviceaccount.yaml
+
+patches:
+  - path: patch-serviceaccount.yaml
 
 generatorOptions: {}
 

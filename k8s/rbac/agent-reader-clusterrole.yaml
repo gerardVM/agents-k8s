@@ -1,0 +1,79 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agent-reader
+  labels:
+    app.kubernetes.io/part-of: agents-k8s
+rules:
+- apiGroups: [""]
+  resources:
+    - pods
+    - pods/log
+    - pods/status
+    - nodes
+    - nodes/proxy
+    - nodes/stats
+    - events
+    - services
+    - endpoints
+    - namespaces
+    - configmaps
+    - secrets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources:
+    - pods
+    - nodes
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+    - deployments
+    - deployments/scale
+    - statefulsets
+    - daemonsets
+    - replicasets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+    - jobs
+    - cronjobs
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources:
+    - horizontalpodautoscalers
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources:
+    - ingresses
+    - networkpolicies
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - storageclasses
+    - volumegattachments
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources:
+    - poddisruptionbudgets
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: agent-reader
+  labels:
+    app.kubernetes.io/part-of: agents-k8s
+roleRef:
+  apiGroup: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  name: agent-reader
+subjects:
+- kind: ServiceAccount
+  name: agent-reader
+  namespace: coder-agent
+- kind: ServiceAccount
+  name: agent-reader
+  namespace: reviewer-agent
+- kind: ServiceAccount
+  name: agent-reader
+  namespace: security-agent

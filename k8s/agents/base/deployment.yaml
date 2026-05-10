@@ -16,12 +16,37 @@ spec:
       labels:
         app: openclaw
     spec:
+      # Keep false by default — overlays that need k8s access
+      # patch this to true and set serviceAccountName.
+      # See k8s/rbac/ for the read-only ClusterRole.
       automountServiceAccountToken: false
       securityContext:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       initContainers:
+        - name: kubectl-install
+          image: busybox:1.37
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              KUBECTL_URL="https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
+              wget -q -O /kubectl-bin/kubectl "$KUBECTL_URL"
+              chmod +x /kubectl-bin/kubectl
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          resources:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: kubectl-bin
+              mountPath: /kubectl-bin
         - name: init-config
           image: busybox:1.37
           imagePullPolicy: IfNotPresent
@@ -81,6 +106,8 @@ spec:
               value: /home/node/.openclaw
             - name: NODE_ENV
               value: production
+            - name: PATH
+              value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/kubectl
             - name: OPENCLAW_GATEWAY_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -167,6 +194,9 @@ spec:
               mountPath: /home/node/.openclaw/workspace/USER.md
               subPath: USER.md
               readOnly: true
+            - name: kubectl-bin
+              mountPath: /opt/kubectl
+              readOnly: true
             - name: tmp-volume
               mountPath: /tmp
             - name: npm-cache
@@ -190,6 +220,8 @@ spec:
         - name: workspace
           configMap:
             name: openclaw-workspace
+        - name: kubectl-bin
+          emptyDir: {}
         - name: npm-cache
           emptyDir: {}
         - name: tmp-volume
