@@ -1,4 +1,5 @@
 import http from "node:http";
+import { Buffer } from "node:buffer";
 
 const API_KEY = process.env.API_KEY;
 if (!API_KEY) {
@@ -22,8 +23,117 @@ function readBody(req) {
   });
 }
 
-async function proxyToUpstream(method, path, bodyRaw) {
+/**
+ * Parse a multipart/form-data body into fields and file parts.
+ */
+function parseMultipart(contentType, body) {
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
+  if (!boundary) return null;
+  const b = boundary[1] || boundary[2];
+  const parts = body.split(`--${b}`);
+  const result = {};
+  for (const part of parts) {
+    if (!part.trim() || part.trim() === "--") continue;
+    const headerEnd = part.indexOf("
+
+");
+    if (headerEnd === -1) continue;
+    const headersRaw = part.slice(0, headerEnd);
+    const value = part.slice(headerEnd + 4);
+    const nameMatch = headersRaw.match(/name="([^"]+)"/);
+    if (!nameMatch) continue;
+    const name = nameMatch[1];
+    const filenameMatch = headersRaw.match(/filename="([^"]+)"/);
+    if (filenameMatch) {
+      result[name] = {
+        value: value.replace(/
+?
+$/, ""),
+        filename: filenameMatch[1],
+        contentType: headersRaw.match(/Content-Type:\s*(\S+)/i)?.[1] || "application/octet-stream",
+      };
+    } else {
+      result[name] = { value: value.replace(/
+?
+$/, "").trim() };
+    }
+  }
+  return result;
+}
+
+/**
+ * Encode a multipart body to forward to the upstream API.
+ */
+function buildMultipartBody(fields) {
+  const boundary = "FormBoundary" + Math.random().toString(36).slice(2);
+  const parts = [];
+  for (const [key, val] of Object.entries(fields)) {
+    if (val.filename) {
+      parts.push(
+        `--${boundary}
+` +
+        `Content-Disposition: form-data; name="${key}"; filename="${val.filename}"
+` +
+        `Content-Type: ${val.contentType}
+
+` +
+        val.value
+      );
+    } else {
+      parts.push(
+        `--${boundary}
+` +
+        `Content-Disposition: form-data; name="${key}"
+
+` +
+        val.value
+      );
+    }
+  }
+  parts.push(`--${boundary}--`);
+  return {
+    body: parts.join("
+"),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
+async function proxyToUpstream(method, path, bodyRaw, contentType) {
   const url = `${UPSTREAM_BASE}${path}`;
+
+  // For audio transcriptions, forward as multipart
+  if (path.endsWith("/audio/transcriptions") && contentType?.startsWith("multipart/form-data")) {
+    const parsed = parseMultipart(contentType, bodyRaw);
+    if (!parsed) {
+      return { status: 400, stream: false, body: JSON.stringify({ error: "invalid multipart" }) };
+    }
+
+    // Re-build the multipart body with the real API key for upstream
+    const upstreamFields = {};
+    for (const [key, val] of Object.entries(parsed)) {
+      upstreamFields[key] = val;
+    }
+
+    const encoded = buildMultipartBody(upstreamFields);
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": encoded.contentType,
+      },
+      body: encoded.body,
+    });
+
+    const contentType_resp = resp.headers.get("content-type") || "";
+    if (contentType_resp.includes("text/event-stream") || contentType_resp.includes("application/x-ndjson")) {
+      return { status: resp.status, stream: true, body: resp.body };
+    }
+
+    const data = await resp.text();
+    return { status: resp.status, stream: false, body: data };
+  }
+
+  // Standard JSON proxy
   const headers = {
     Authorization: `Bearer ${API_KEY}`,
     "Content-Type": "application/json",
@@ -35,10 +145,9 @@ async function proxyToUpstream(method, path, bodyRaw) {
   }
 
   const resp = await fetch(url, opts);
-  const contentType = resp.headers.get("content-type") || "";
+  const contentType_resp = resp.headers.get("content-type") || "";
 
-  // For streaming (chat completions with stream: true), pipe through
-  if (contentType.includes("text/event-stream") || contentType.includes("application/x-ndjson")) {
+  if (contentType_resp.includes("text/event-stream") || contentType_resp.includes("application/x-ndjson")) {
     return { status: resp.status, stream: true, body: resp.body };
   }
 
@@ -59,13 +168,13 @@ http.createServer(async (req, res) => {
       return json(res, 405, { error: "method not allowed" });
     }
 
+    const contentType = req.headers["content-type"] || "";
     const body = await readBody(req);
 
     // Proxy to upstream, preserving the path
-    const result = await proxyToUpstream("POST", req.url, body);
+    const result = await proxyToUpstream("POST", req.url, body, contentType);
 
     if (result.stream) {
-      // Pass through streaming response
       res.writeHead(result.status, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -76,7 +185,10 @@ http.createServer(async (req, res) => {
       }
       res.end();
     } else {
-      res.writeHead(result.status, { "Content-Type": "application/json" });
+      const respContentType = contentType.startsWith("multipart/form-data") && req.url.endsWith("/audio/transcriptions")
+        ? { "Content-Type": "application/json" }
+        : { "Content-Type": "application/json" };
+      res.writeHead(result.status, respContentType);
       res.end(result.body);
     }
   } catch (err) {

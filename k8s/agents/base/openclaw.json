@@ -44,7 +44,18 @@
     "dmScope": "per-channel-peer"
   },
   "tools": {
-    "profile": "coding"
+    "profile": "coding",
+    "media": {
+      "audio": {
+        "enabled": true,
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini-transcribe"
+          }
+        ]
+      }
+    }
   },
   "models": {
     "mode": "merge",
@@ -108,6 +119,18 @@
             ],
             "contextWindow": 32768,
             "maxTokens": 4096,
+            "compat": {
+              "supportsUsageInStreaming": true
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "gpt-4o-mini-transcribe",
+            "name": "GPT-4o Mini Transcribe",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32768,
             "compat": {
               "supportsUsageInStreaming": true
             },
