@@ -66,7 +66,7 @@ http.createServer(async (req, res) => {
     if (!rest || rest.length < 2) return json(res, 400, { ok: false, error: "missing file path" });
 
     try {
-      const upstream = await fetch(`https://api.telegram.org/file/bot${TOKEN}${rest}`);
+      const upstream = await fetch(`https://api.telegram.org/file/bot${rest}`);
       if (!upstream.ok) {
         return json(res, upstream.status, { ok: false, error: `upstream ${upstream.status}` });
       }
