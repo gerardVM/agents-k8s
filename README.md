@@ -37,6 +37,10 @@ k8s/
 
 All components follow the same kustomize pattern: an overlay points to a shared base, patches in provider-specific values (env vars, namespace), and generates a ConfigMap from overlay-local files.
 
+### Per-agent openclaw.json
+
+By default, agents share the `openclaw.json` in `k8s/agents/base/`. An overlay can provide its own `openclaw.json` to override it — generate a ConfigMap with the same `openclaw-config` name in the overlay's `configMapGenerator`, and kustomize will replace the base version. This allows each agent to have an independently managed configuration.
+
 ---
 
 ## Agents
@@ -49,6 +53,9 @@ Reviews open pull requests, explains changes, and approves only when instructed.
 
 ### security (`security-agent` namespace)
 On-demand security auditor. Inspects its own pod environment — checks service account tokens, env var exposure, writable paths, network reachability, and container runtime security posture. Does not scan other pods or namespaces.
+
+### tester (`tester-agent` namespace)
+On-demand testing agent. Runs deployment validations, smoke tests, and integration checks. Reports structured pass/fail/skip results. Default model is DeepSeek; can switch to GPT-Mini on request. Has its own `openclaw.json` in its overlay directory for independent configuration.
 
 ---
 
@@ -119,14 +126,16 @@ All three component types (agents, proxies, tools) follow the same pattern:
 3. Add a `namespace.yaml`
 4. Wire overlay-specific files and patches
 
-**For agents**, add a `workspace/` directory with 7 ConfigMap files:
+**For agents**, add a `workspace/` directory with workspace files:
 - `AGENTS.md` — agent purpose
 - `IDENTITY.md` — name and personality
 - `SOUL.md` — workflow rules and boundaries
 - `TOOLS.md` — tool-specific notes
 - `USER.md` — human context
 - `HEARTBEAT.md` — heartbeat placeholder
-- `LEARNINGS.md` — cross-session memory
+- `LEARNINGS.md` — cross-session memory (optional)
+
+The workspace files are listed in the overlay's `configMapGenerator` under the `openclaw-workspace` name. Agents that need their own `openclaw.json` can add a second `configMapGenerator` entry named `openclaw-config` to override the base config.
 
 **For proxies**, add `index.mjs` and `package.json` using the generic `API_KEY` / `UPSTREAM_BASE_URL` convention, then patch the deployment to inject the correct env vars.
 

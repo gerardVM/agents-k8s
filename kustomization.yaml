@@ -4,5 +4,6 @@ resources:
  - k8s/agents/overlays/coder
  - k8s/agents/overlays/reviewer
  - k8s/agents/overlays/security
+ - k8s/agents/overlays/tester
  - k8s/proxies/overlays/deepseek
  - k8s/proxies/overlays/openai

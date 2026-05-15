@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: tester-agent
+resources:
+  - ../../base
+  - ../../../tools/overlays/telegram
+  - ../../../tools/overlays/github
+
+generatorOptions: {}
+
+configMapGenerator:
+  - name: openclaw-config
+    behavior: replace
+    files:
+      - openclaw.json
+  - name: openclaw-workspace
+    files:
+      - workspace/AGENTS.md
+      - workspace/HEARTBEAT.md
+      - workspace/IDENTITY.md
+      - workspace/SOUL.md
+      - workspace/TOOLS.md
+      - workspace/USER.md
