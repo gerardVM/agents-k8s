@@ -1,0 +1,87 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "port": 18789,
+    "auth": {
+      "mode": "token"
+    },
+    "controlUi": {
+      "enabled": false
+    },
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "models": {
+        "local-llm/tinyllama-service": {
+          "alias": "TinyLlama (local)"
+        }
+      },
+      "model": {
+        "primary": "local-llm/tinyllama-service"
+      }
+    },
+    "list": [
+      {
+        "id": "default",
+        "name": "OpenClaw Assistant",
+        "workspace": "~/.openclaw/workspace"
+      }
+    ]
+  },
+  "cron": {
+    "enabled": false
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "tools": {
+    "profile": "coding"
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "local-llm": {
+        "baseUrl": "http://tinyllama-service.local-llm.svc.cluster.local:8080",
+        "api": "openai-completions",
+        "noKey": true,
+        "models": [
+          {
+            "id": "tinyllama-service",
+            "name": "TinyLlama (local-llm)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 16000,
+            "maxTokens": 1024,
+            "compat": {
+              "supportsUsageInStreaming": true
+            },
+            "api": "openai-completions"
+          }
+        ]
+      }
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "allowlist",
+      "allowFrom": [
+        "__TELEGRAM_ALLOWED_ID__"
+      ],
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      },
+      "apiRoot": "http://telegram-api-service:8080"
+    }
+  }
+}
